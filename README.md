@@ -11,6 +11,7 @@ Because for some reason everything else is terrible??
   - I don't want to install backup tools in every application container
   - I don't want every application container to have write access to my backups folder
   - I want to have a label on the application-container which tells my backup-container what to do
+- None of these log when a job is added or removed, which is really useful for debugging
 
 Kissycron will:
 
@@ -80,6 +81,11 @@ services:
 ## Support
 
 I've built this for my own personal use, and I'm not sure if I like the docker label format, so I might change that on short notice. If literally a single person says "I'd like to use this too" then I'll try to make the interface stable and do a proper version-numbered release.
+
+## debugging
+
+- `--dump` will print out all jobs that kissycron can parse from `--file` and `--docker`
+- `--debug` will print out extra debugging information while running
 
 ## Dependencies
 
