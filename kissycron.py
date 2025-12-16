@@ -25,6 +25,25 @@ class CronJob:
         self.command = "echo 'No command specified'"
         self.id = id
 
+    def _comparison_key(self):
+        return (
+            self.minute,
+            self.hour,
+            self.day_of_month,
+            self.month,
+            self.day_of_week,
+            self.command,
+            self.id,
+        )
+
+    def __eq__(self, other):
+        if not isinstance(other, CronJob):
+            return False
+        return self._comparison_key() == other._comparison_key()
+
+    def __hash__(self):
+        return hash(self._comparison_key())
+
     def set_schedule(
         self,
         minute: str,
@@ -71,7 +90,7 @@ class CronJob:
 
 def parse_crontab(path: Path) -> list[CronJob]:
     jobs = []
-    log.info(f"Parsing {path.absolute()}")
+    log.debug(f"Parsing {path.absolute()}")
 
     if not path.is_file():
         log.warning(f"Crontab file '{path.absolute()}' not found, skipping.")
@@ -94,7 +113,7 @@ def parse_crontab(path: Path) -> list[CronJob]:
 
 def parse_docker_labels() -> list[CronJob]:
     jobs = {}
-    log.info("Getting jobs from docker labels")
+    log.debug("Getting jobs from docker labels")
     try:
         docker_ps = subprocess.check_output(
             ["docker", "ps", "--format", "{{.ID}} {{.Names}}"]
@@ -135,34 +154,48 @@ def parse_docker_labels() -> list[CronJob]:
 
 def main(argv: list[str]):
     parser = argparse.ArgumentParser(description="Kissycron")
-    parser.add_argument("--file", type=Path, help="Path to crontab file")
+    parser.add_argument("--file", type=Path, help="Parse crontab file")
     parser.add_argument("--docker", action="store_true", help="Parse docker labels")
     parser.add_argument("--dump", action="store_true", help="Dump parsed jobs and exit")
+    parser.add_argument("--verbose", "-v", action="store_true")
     args = parser.parse_args(argv)
 
-    logging.basicConfig(level=logging.DEBUG, format="%(asctime)s %(message)s")
+    logging.basicConfig(
+        level=logging.DEBUG if args.verbose else logging.INFO,
+        format="%(asctime)s %(message)s",
+    )
 
     if args.file and not os.path.isfile(args.file):
         log.error(f"Crontab file '{args.file}' does not exist.")
         sys.exit(1)
 
+    last_jobs: set[CronJob] = set()
     while True:
-        jobs = [
+        jobs: set[CronJob] = {
             *(parse_crontab(args.file) if args.file else []),
             *(parse_docker_labels() if args.docker else []),
-        ]
+        }
         if args.dump:
             for job in jobs:
                 print(str(job))
             sys.exit(0)
 
-        log.info("Running any scheduled tasks")
+        if jobs != last_jobs:
+            add_jobs = jobs - last_jobs
+            del_jobs = last_jobs - jobs
+            if add_jobs:
+                log.info("Jobs added:\n" + "\n".join(str(job) for job in add_jobs))
+            if del_jobs:
+                log.info("Jobs removed:\n" + "\n".join(str(job) for job in del_jobs))
+            last_jobs = jobs
+
+        log.debug("Running any scheduled tasks")
         now = datetime.datetime.now()
         for job in jobs:
             if job.matches(now):
                 job.spawn()
 
-        log.info("Sleeping until next minute")
+        log.debug("Sleeping until next minute")
         now = datetime.datetime.now()
         next_minute = (now + datetime.timedelta(minutes=1)).replace(
             second=0, microsecond=0
