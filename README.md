@@ -61,7 +61,6 @@ Example docker compose file:
 services:
   cron:
     image: shish2k/kissycron:latest
-    command: kissycron --docker
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /data:/data:ro
@@ -70,10 +69,12 @@ services:
   travmap:
     image: shish2k/travmap:latest
     labels:
-      kissycron.job-local.backup.schedule: "18 1 * * *"
-      kissycron.job-local.backup.command: "backup /data/travmap/ /data/backups/travmap/"
+      # run daily update script in the app container
       kissycron.job-exec.update.schedule: "5 2 * * *"
       kissycron.job-exec.update.command: "/usr/bin/python3 /utils/manage.py update"
+      # run backups from the cron container
+      kissycron.job-local.backup.schedule: "18 1 * * *"
+      kissycron.job-local.backup.command: "backup /data/travmap/ /data/backups/travmap/"
     volumes:
       - /data/travmap:/data
 ```
