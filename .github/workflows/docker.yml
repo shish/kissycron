@@ -1,0 +1,46 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Test
+        run: ./kissycron.py --file crontab --dump
+
+  publish:
+    name: Publish
+    runs-on: ubuntu-24.04
+    if: github.ref == 'refs/heads/main'
+    needs:
+      - build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Publish
+        uses: elgohr/Publish-Docker-Github-Action@main
+        with:
+          name: shish2k/kissycron
+          username: ${{ vars.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+  deploy:
+    name: Deploy
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    needs:
+      - publish
+    steps:
+      - name: Deploy
+        uses: shish/watchtower-update@main
+        with:
+          url: https://watchtower.shish.io/v1/update
+          api_token: ${{ secrets.WATCHTOWER_TOKEN }}
+          images: shish2k/kissycron
