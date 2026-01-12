@@ -175,12 +175,10 @@ def run_cron(args: argparse.Namespace):
         jobs = find_jobs(args)
 
         if jobs != last_jobs:
-            add_jobs = jobs - last_jobs
-            del_jobs = last_jobs - jobs
-            if add_jobs:
-                log.info("Jobs added:\n" + "\n".join(str(job) for job in add_jobs))
-            if del_jobs:
+            if del_jobs := last_jobs - jobs:
                 log.info("Jobs removed:\n" + "\n".join(str(job) for job in del_jobs))
+            if add_jobs := jobs - last_jobs:
+                log.info("Jobs added:\n" + "\n".join(str(job) for job in add_jobs))
             last_jobs = jobs
 
         log.debug("Running any scheduled tasks")
