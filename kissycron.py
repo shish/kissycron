@@ -152,40 +152,25 @@ def parse_docker_labels() -> list[CronJob]:
     return list(jobs.values())
 
 
-def main(argv: list[str]):
-    parser = argparse.ArgumentParser(description="Kissycron")
-    parser.add_argument("--file", type=Path, help="Parse crontab file")
-    parser.add_argument("--docker", action="store_true", help="Parse docker labels")
-    parser.add_argument("--dump", action="store_true", help="Dump parsed jobs and exit")
-    parser.add_argument("--match", type=str, help="Only process jobs with matching ID")
-    parser.add_argument("--verbose", "-v", action="store_true")
-    args = parser.parse_args(argv)
+def find_jobs(args: argparse.Namespace) -> set[CronJob]:
+    jobs: set[CronJob] = {
+        *(parse_crontab(args.file) if args.file else []),
+        *(parse_docker_labels() if args.docker else []),
+    }
 
-    logging.basicConfig(
-        level=logging.DEBUG if args.verbose else logging.INFO,
-        format="%(asctime)s %(message)s",
-    )
-
-    if args.file and not os.path.isfile(args.file):
-        log.error(f"Crontab file '{args.file}' does not exist.")
-        sys.exit(1)
-
-    last_jobs: set[CronJob] = set()
-    while True:
-        jobs: set[CronJob] = {
-            *(parse_crontab(args.file) if args.file else []),
-            *(parse_docker_labels() if args.docker else []),
+    if args.match:
+        jobs = {
+            job for job in jobs if args.match in job.id or args.match in job.command
         }
 
-        if args.match:
-            jobs = {
-                job for job in jobs if args.match in job.id or args.match in job.command
-            }
+    return jobs
 
-        if args.dump:
-            for job in jobs:
-                print(str(job))
-            sys.exit(0)
+
+def run_cron(args: argparse.Namespace):
+    """Run cron daemon - continuously check and execute scheduled jobs"""
+    last_jobs: set[CronJob] = set()
+    while True:
+        jobs = find_jobs(args)
 
         if jobs != last_jobs:
             add_jobs = jobs - last_jobs
@@ -212,6 +197,54 @@ def main(argv: list[str]):
         # if we accidentally slept for 59 seconds, sleep some more
         while datetime.datetime.now().minute == now.minute:
             sleep(0.5)
+
+
+def run_now(args: argparse.Namespace):
+    """Run all matching jobs immediately, ignoring their schedules"""
+    jobs = find_jobs(args)
+    for job in jobs:
+        job.spawn()
+
+
+def dump(args: argparse.Namespace):
+    """Dump parsed jobs and exit"""
+    jobs = find_jobs(args)
+    for job in jobs:
+        print(str(job))
+
+
+def main(argv: list[str]):
+    parser = argparse.ArgumentParser(description="Kissycron")
+    parser.add_argument("--file", type=Path, help="Parse crontab file")
+    parser.add_argument("--docker", action="store_true", help="Parse docker labels")
+    parser.add_argument("--match", type=str, help="Only process jobs with matching ID")
+    parser.add_argument("--verbose", "-v", action="store_true")
+
+    subparsers = parser.add_subparsers(dest="command", help="Command to run")
+    subparsers.add_parser("run-cron", help="Run cron daemon (default)")
+    subparsers.add_parser("run-now", help="Run all matching jobs immediately")
+    subparsers.add_parser("dump", help="Dump parsed jobs and exit")
+
+    args = parser.parse_args(argv)
+
+    logging.basicConfig(
+        level=logging.DEBUG if args.verbose else logging.INFO,
+        format="%(asctime)s %(message)s",
+    )
+
+    if args.file and not os.path.isfile(args.file):
+        log.error(f"Crontab file '{args.file}' does not exist.")
+        sys.exit(1)
+
+    # Default to run-cron if no command specified
+    command = args.command or "run-cron"
+
+    if command == "run-cron":
+        run_cron(args)
+    elif command == "run-now":
+        run_now(args)
+    elif command == "dump":
+        dump(args)
 
 
 if __name__ == "__main__":
