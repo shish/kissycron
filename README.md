@@ -83,10 +83,12 @@ services:
 
 I've built this for my own personal use, and I'm not sure if I like the docker label format, so I might change that on short notice. If literally a single person says "I'd like to use this too" then I'll try to make the interface stable and do a proper version-numbered release.
 
-## debugging
+## Debugging
 
-- `--dump` will print out all jobs that kissycron can parse from `--file` and `--docker`
+- `dump` will print out all jobs that kissycron can parse from `--file` and `--docker`
 - `--debug` will print out extra debugging information while running
+- `--match` will only dump/run matching commands
+- `run-now` will run all matching commands immediately and exit
 
 ## Dependencies
 
