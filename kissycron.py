@@ -157,6 +157,7 @@ def main(argv: list[str]):
     parser.add_argument("--file", type=Path, help="Parse crontab file")
     parser.add_argument("--docker", action="store_true", help="Parse docker labels")
     parser.add_argument("--dump", action="store_true", help="Dump parsed jobs and exit")
+    parser.add_argument("--match", type=str, help="Only process jobs with matching ID")
     parser.add_argument("--verbose", "-v", action="store_true")
     args = parser.parse_args(argv)
 
@@ -175,6 +176,12 @@ def main(argv: list[str]):
             *(parse_crontab(args.file) if args.file else []),
             *(parse_docker_labels() if args.docker else []),
         }
+
+        if args.match:
+            jobs = {
+                job for job in jobs if args.match in job.id or args.match in job.command
+            }
+
         if args.dump:
             for job in jobs:
                 print(str(job))
