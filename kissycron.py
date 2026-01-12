@@ -78,10 +78,12 @@ class CronJob:
                 return True
         return False
 
-    def spawn(self):
+    def spawn(self, wait=False):
         maybe_id = f"[{self.id}] " if self.id else ""
         log.info(f"{maybe_id}Executing command: {self.command}")
-        subprocess.Popen(self.command, shell=True)
+        proc = subprocess.Popen(self.command, shell=True)
+        if wait:
+            proc.wait()
 
     def __str__(self):
         maybe_id = f" # {self.id}" if self.id else ""
@@ -203,7 +205,7 @@ def run_now(args: argparse.Namespace):
     """Run all matching jobs immediately, ignoring their schedules"""
     jobs = find_jobs(args)
     for job in jobs:
-        job.spawn()
+        job.spawn(wait=True)
 
 
 def dump(args: argparse.Namespace):
