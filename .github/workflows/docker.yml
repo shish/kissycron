@@ -13,7 +13,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Test
-        run: ./kissycron.py --file crontab --dump
+        run: ./kissycron.py --file crontab dump
 
   publish:
     name: Publish
