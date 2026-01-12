@@ -87,7 +87,7 @@ class CronJob:
 
     def __str__(self):
         maybe_id = f" # {self.id}" if self.id else ""
-        return f"{self.minute} {self.hour} {self.day_of_month} {self.month} {self.day_of_week} {self.command}{maybe_id}"
+        return f"{self.minute:2s} {self.hour:2s} {self.day_of_month:2s} {self.month:2s} {self.day_of_week:2s} {self.command}{maybe_id}"
 
 
 def parse_crontab(path: Path) -> list[CronJob]:
