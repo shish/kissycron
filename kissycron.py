@@ -222,7 +222,7 @@ def main(argv: list[str]):
 
     subparsers = parser.add_subparsers(dest="command", help="Command to run")
     subparsers.add_parser("run-cron", help="Run cron daemon (default)")
-    subparsers.add_parser("run-now", help="Run all matching jobs immediately")
+    subparsers.add_parser("run-now", help="Run all matching jobs immediately and exit")
     subparsers.add_parser("dump", help="Dump parsed jobs and exit")
 
     args = parser.parse_args(argv)

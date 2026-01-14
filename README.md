@@ -49,7 +49,7 @@ kissycron.<job-type>.<job-id>.<attribute>
 Where:
 - `<job-type>` can be
   - `job-local` - runs a command in the kissycron container
-  - `job-exec` - runs a command in the container with the label
+  - `job-exec` - runs a command in the labelled container
 - `<job-id>` is any string, unique per container (doesn't need to be globally unique)
 - `<attribute>` can be
   - `schedule` - a standard cron schedue as explained in the "crontab format" section
@@ -64,7 +64,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /data:/data:ro
-      - /data/backups:/data/backups:rw
+      - /backups:/backups:rw
 
   travmap:
     image: shish2k/travmap:latest
@@ -74,7 +74,7 @@ services:
       kissycron.job-exec.update.command: "/usr/bin/python3 /utils/manage.py update"
       # run backups from the cron container
       kissycron.job-local.backup.schedule: "18 1 * * *"
-      kissycron.job-local.backup.command: "backup /data/travmap/ /data/backups/travmap/"
+      kissycron.job-local.backup.command: "backup /data/travmap/ /backups/travmap/"
     volumes:
       - /data/travmap:/data
 ```
@@ -85,10 +85,10 @@ I've built this for my own personal use, and I'm not sure if I like the docker l
 
 ## Debugging
 
-- `dump` will print out all jobs that kissycron can parse from `--file` and `--docker`
 - `--debug` will print out extra debugging information while running
 - `--match` will only dump/run matching commands
 - `run-now` will run all matching commands immediately and exit
+- `dump` will print out all jobs that kissycron can parse from `--file` and `--docker`
 
 ## Dependencies
 
@@ -99,3 +99,4 @@ I've built this for my own personal use, and I'm not sure if I like the docker l
 
 - The docker image is based on `python`, which is based on `debian`, so you get all the usual debian utilities
 - `/usr/bin/backup` - a simple wrapper around rsync
+  - `UID` / `GID` can be set with environment variables so that all backup files are owned by the same user
